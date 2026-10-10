@@ -1,0 +1,952 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chess Touch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+  <style>
+    :root {
+      --ink: #24221f;
+      --muted: #76716b;
+      --paper: #f5f1e8;
+      --panel: rgba(255, 253, 248, 0.82);
+      --line: rgba(54, 47, 40, 0.14);
+      --blue: #2563eb;
+      --blue-dark: #1745ab;
+      --red: #c93f3f;
+      --shadow: 0 24px 60px rgba(56, 47, 34, 0.12);
+      --board-size: min(39vw, 510px);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(240, 193, 121, 0.28), transparent 32rem),
+        radial-gradient(circle at 100% 25%, rgba(91, 130, 190, 0.18), transparent 36rem),
+        var(--paper);
+      font-family: "DM Sans", sans-serif;
+    }
+
+    button,
+    select,
+    input {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    .app {
+      width: min(1420px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 28px clamp(18px, 4vw, 64px) 40px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 46px;
+      height: 46px;
+      place-items: center;
+      color: white;
+      background: var(--ink);
+      border-radius: 14px;
+      font-size: 28px;
+      line-height: 1;
+      box-shadow: 0 8px 22px rgba(36, 34, 31, 0.18);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-family: "DM Serif Display", serif;
+      font-size: clamp(27px, 3vw, 38px);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+    }
+
+    .brand p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .restart-button {
+      display: inline-flex;
+      min-height: 44px;
+      align-items: center;
+      gap: 8px;
+      padding: 0 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.62);
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: 160ms ease;
+    }
+
+    .restart-button:hover {
+      border-color: rgba(54, 47, 40, 0.28);
+      background: white;
+      transform: translateY(-1px);
+    }
+
+    .control-deck {
+      display: grid;
+      grid-template-columns: minmax(300px, 1fr) auto minmax(300px, 1fr);
+      gap: 24px;
+      align-items: center;
+      margin-bottom: 34px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.62);
+      background: var(--panel);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .clock {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 15px 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.55);
+      border-radius: 17px;
+      transition: 180ms ease;
+    }
+
+    .clock.active {
+      border-color: rgba(37, 99, 235, 0.52);
+      background: rgba(232, 240, 255, 0.9);
+      box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08);
+    }
+
+    .clock.flagged {
+      border-color: rgba(201, 63, 63, 0.54);
+      background: rgba(255, 233, 229, 0.92);
+      animation: flag-pulse 1.8s infinite;
+    }
+
+    @keyframes flag-pulse {
+      50% { box-shadow: 0 0 0 7px rgba(201, 63, 63, 0.08); }
+    }
+
+    .clock-player {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 11px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .player-dot {
+      width: 14px;
+      height: 14px;
+      flex: none;
+      border: 2px solid #d4d0ca;
+      background: #fff;
+      border-radius: 50%;
+    }
+
+    .clock.black .player-dot {
+      border-color: #292724;
+      background: #292724;
+    }
+
+    .clock-time {
+      min-width: 108px;
+      font-size: clamp(28px, 3vw, 40px);
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+      line-height: 1;
+      text-align: right;
+    }
+
+    .clock.flagged .clock-time {
+      color: var(--red);
+    }
+
+    .clock.flagged .clock-player::after {
+      content: "Flagged";
+      color: var(--red);
+      font-size: 10px;
+    }
+
+    .clock-controls {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .icon-button {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 13px;
+      cursor: pointer;
+      font-size: 17px;
+      transition: 160ms ease;
+    }
+
+    .icon-button:hover {
+      border-color: rgba(37, 99, 235, 0.4);
+      color: var(--blue);
+      transform: translateY(-1px);
+    }
+
+    .mode-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .field-label {
+      margin-right: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .select-wrap {
+      position: relative;
+    }
+
+    select,
+    .number-input {
+      height: 42px;
+      border: 1px solid var(--line);
+      outline: none;
+      background: rgba(255, 255, 255, 0.75);
+      border-radius: 12px;
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    select {
+      min-width: 174px;
+      padding: 0 38px 0 13px;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .select-wrap::after {
+      position: absolute;
+      top: 50%;
+      right: 13px;
+      content: "⌄";
+      pointer-events: none;
+      transform: translateY(-58%);
+    }
+
+    .custom-time {
+      display: none;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .custom-time.visible {
+      display: flex;
+    }
+
+    .number-input {
+      width: 72px;
+      padding: 0 10px;
+    }
+
+    .number-unit {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .segmented {
+      display: inline-flex;
+      padding: 4px;
+      background: rgba(229, 225, 216, 0.7);
+      border-radius: 14px;
+    }
+
+    .segment {
+      min-height: 35px;
+      padding: 0 14px;
+      border: 0;
+      background: transparent;
+      border-radius: 10px;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      transition: 160ms ease;
+    }
+
+    .segment.active {
+      color: var(--ink);
+      background: white;
+      box-shadow: 0 3px 11px rgba(54, 47, 40, 0.09);
+    }
+
+    .boards-stage {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(32px, 6vw, 86px);
+      align-items: center;
+      justify-items: center;
+      padding: 12px 0 24px;
+    }
+
+    .board-column {
+      display: grid;
+      width: 100%;
+      justify-items: center;
+      gap: 15px;
+    }
+
+    .board-meta {
+      display: flex;
+      width: var(--board-size);
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .board-meta strong {
+      color: var(--ink);
+      font-size: 14px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .board-shell {
+      width: var(--board-size);
+      height: var(--board-size);
+      padding: 9px;
+      background: #443f38;
+      border-radius: 7px;
+      box-shadow:
+        0 22px 45px rgba(50, 43, 32, 0.18),
+        0 2px 4px rgba(50, 43, 32, 0.18);
+      transition: transform 420ms cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .board {
+      width: 100%;
+      height: 100%;
+      touch-action: manipulation;
+    }
+
+    .board-shell.rotate-90 {
+      transform: rotate(90deg);
+    }
+
+    .board-shell.rotate-neg-90 {
+      transform: rotate(-90deg);
+    }
+
+    .board-shell.rotate-180 {
+      transform: rotate(180deg);
+    }
+
+    .board .white-1e1d7 {
+      background-color: #f0d9b5;
+    }
+
+    .board .black-3c85d {
+      background-color: #9a6e53;
+    }
+
+    .board .square-55d63 {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .board .square-55d63.selected-square {
+      box-shadow: inset 0 0 0 5px rgba(40, 104, 213, 0.78);
+    }
+
+    .board .square-55d63.valid-move::after {
+      position: absolute;
+      z-index: 5;
+      top: 50%;
+      left: 50%;
+      width: 24%;
+      height: 24%;
+      content: "";
+      pointer-events: none;
+      background: rgba(30, 90, 183, 0.62);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .board .square-55d63.valid-capture::after {
+      position: absolute;
+      z-index: 5;
+      inset: 7%;
+      content: "";
+      pointer-events: none;
+      border: 5px solid rgba(30, 90, 183, 0.66);
+      border-radius: 50%;
+    }
+
+    .statusbar {
+      display: flex;
+      min-height: 32px;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--blue);
+      border-radius: 50%;
+    }
+
+    @media (max-width: 930px) {
+      :root {
+        --board-size: min(43vw, 430px);
+      }
+
+      .control-deck {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .clock-controls {
+        grid-column: 1 / -1;
+        justify-content: center;
+        grid-row: 2;
+      }
+    }
+
+    @media (max-width: 680px) {
+      :root {
+        --board-size: min(42.5vw, 330px);
+      }
+
+      .app {
+        padding-inline: 10px;
+      }
+
+      .topbar {
+        padding-inline: 8px;
+      }
+
+      .brand p {
+        display: none;
+      }
+
+      .restart-button {
+        padding: 0 13px;
+        font-size: 13px;
+      }
+
+      .control-deck {
+        gap: 10px;
+        padding: 10px;
+        border-radius: 17px;
+      }
+
+      .clock {
+        display: block;
+        padding: 11px;
+      }
+
+      .clock-player {
+        margin-bottom: 7px;
+        font-size: 10px;
+      }
+
+      .clock-time {
+        min-width: 0;
+        font-size: clamp(25px, 8vw, 36px);
+        text-align: left;
+      }
+
+      .mode-row {
+        padding-inline: 8px;
+      }
+
+      .boards-stage {
+        gap: 13px;
+      }
+
+      .board-shell {
+        padding: 5px;
+      }
+
+      .board-meta {
+        width: var(--board-size);
+        font-size: 9px;
+      }
+
+      .board-meta strong {
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">♞</div>
+        <div>
+          <h1>Chess Touch</h1>
+          <p>One game · Two perspectives</p>
+        </div>
+      </div>
+      <button class="restart-button" id="restartGame" type="button">
+        <span aria-hidden="true">↻</span>
+        Restart game
+      </button>
+    </header>
+
+    <section class="control-deck" aria-label="Chess clocks">
+      <div class="clock white" id="whiteClock">
+        <div class="clock-player"><span class="player-dot"></span>White</div>
+        <div class="clock-time" id="whiteTime">05:00</div>
+      </div>
+
+      <div class="clock-controls">
+        <button class="icon-button" id="pauseClock" type="button" aria-label="Pause clock" title="Pause clock">Ⅱ</button>
+        <button class="icon-button" id="resetClock" type="button" aria-label="Reset clock" title="Reset clock">↺</button>
+      </div>
+
+      <div class="clock black" id="blackClock">
+        <div class="clock-player"><span class="player-dot"></span>Black</div>
+        <div class="clock-time" id="blackTime">05:00</div>
+      </div>
+    </section>
+
+    <section class="mode-row" aria-label="Game settings">
+      <div class="field-group">
+        <label class="field-label" for="timeMode">Clock</label>
+        <div class="select-wrap">
+          <select id="timeMode">
+            <option value="1|0">Bullet · 1 min</option>
+            <option value="3|0">Blitz · 3 min</option>
+            <option value="3|2">Blitz · 3 + 2</option>
+            <option value="5|0" selected>Blitz · 5 min</option>
+            <option value="10|0">Rapid · 10 min</option>
+            <option value="15|10">Rapid · 15 + 10</option>
+            <option value="30|0">Classical · 30 min</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="custom-time" id="customTime">
+          <input class="number-input" id="customMinutes" type="number" min="1" max="180" value="10" aria-label="Custom minutes">
+          <span class="number-unit">min</span>
+          <input class="number-input" id="customIncrement" type="number" min="0" max="60" value="0" aria-label="Custom increment seconds">
+          <span class="number-unit">sec inc.</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">Board layout</span>
+        <div class="segmented" role="group" aria-label="Board layout">
+          <button class="segment active" type="button" data-layout="opposed">Opposed</button>
+          <button class="segment" type="button" data-layout="sideways">Sideways</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="boards-stage">
+      <div class="board-column">
+        <div class="board-meta"><strong>Board A</strong><span id="leftPerspective">White perspective</span></div>
+        <div class="board-shell" id="leftShell">
+          <div class="board" id="boardLeft"></div>
+        </div>
+      </div>
+      <div class="board-column">
+        <div class="board-meta"><strong>Board B</strong><span id="rightPerspective">Black perspective</span></div>
+        <div class="board-shell rotate-180" id="rightShell">
+          <div class="board" id="boardRight"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="statusbar" role="status" aria-live="polite">
+      <span class="status-dot"></span>
+      <span id="gameStatus">White to move · Tap a piece to see legal moves</span>
+    </div>
+  </main>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+  <script>
+    (() => {
+      const game = new Chess();
+      const boardIds = ["boardLeft", "boardRight"];
+      const pieceTheme = "https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png";
+      let boards = [];
+      let selectedSquare = null;
+      let legalTargets = [];
+      let layout = "opposed";
+
+      const clock = {
+        initialMs: 5 * 60 * 1000,
+        incrementMs: 0,
+        remaining: { w: 5 * 60 * 1000, b: 5 * 60 * 1000 },
+        flagged: { w: false, b: false },
+        active: null,
+        running: false,
+        started: false,
+        lastTick: null,
+        timer: null
+      };
+
+      const elements = {
+        leftShell: document.getElementById("leftShell"),
+        rightShell: document.getElementById("rightShell"),
+        leftPerspective: document.getElementById("leftPerspective"),
+        rightPerspective: document.getElementById("rightPerspective"),
+        gameStatus: document.getElementById("gameStatus"),
+        whiteClock: document.getElementById("whiteClock"),
+        blackClock: document.getElementById("blackClock"),
+        whiteTime: document.getElementById("whiteTime"),
+        blackTime: document.getElementById("blackTime"),
+        pauseClock: document.getElementById("pauseClock"),
+        timeMode: document.getElementById("timeMode"),
+        customTime: document.getElementById("customTime"),
+        customMinutes: document.getElementById("customMinutes"),
+        customIncrement: document.getElementById("customIncrement")
+      };
+
+      function squareFromElement(element) {
+        const square = element.closest(".square-55d63");
+        if (!square) return null;
+        const squareClass = Array.from(square.classList).find((name) => /^square-[a-h][1-8]$/.test(name));
+        return squareClass ? squareClass.slice(7) : null;
+      }
+
+      function clearHighlights() {
+        document.querySelectorAll(".selected-square, .valid-move, .valid-capture").forEach((square) => {
+          square.classList.remove("selected-square", "valid-move", "valid-capture");
+        });
+      }
+
+      function paintHighlights() {
+        clearHighlights();
+        if (!selectedSquare) return;
+
+        boardIds.forEach((boardId) => {
+          const root = document.getElementById(boardId);
+          root.querySelector(`.square-${selectedSquare}`)?.classList.add("selected-square");
+          legalTargets.forEach(({ to, captured }) => {
+            root.querySelector(`.square-${to}`)?.classList.add(captured ? "valid-capture" : "valid-move");
+          });
+        });
+      }
+
+      function selectSquare(square) {
+        const piece = game.get(square);
+        if (!piece || piece.color !== game.turn()) {
+          selectedSquare = null;
+          legalTargets = [];
+          paintHighlights();
+          return;
+        }
+
+        selectedSquare = square;
+        legalTargets = game.moves({ square, verbose: true });
+        paintHighlights();
+      }
+
+      function completeMove(source, target) {
+        const movingColor = game.turn();
+        const move = game.move({ from: source, to: target, promotion: "q" });
+        if (!move) return false;
+
+        boards.forEach((board) => board.position(game.fen(), false));
+        selectedSquare = null;
+        legalTargets = [];
+        window.setTimeout(paintHighlights, 0);
+        advanceClock(movingColor);
+        updateStatus();
+        return true;
+      }
+
+      function handleSquareTap(event) {
+        const square = squareFromElement(event.target);
+        if (!square) return;
+
+        if (selectedSquare && legalTargets.some((move) => move.to === square)) {
+          completeMove(selectedSquare, square);
+          return;
+        }
+
+        if (square === selectedSquare) {
+          selectedSquare = null;
+          legalTargets = [];
+          paintHighlights();
+          return;
+        }
+
+        selectSquare(square);
+      }
+
+      function onDragStart(source, piece) {
+        if (game.game_over()) return false;
+        if ((game.turn() === "w" && piece.startsWith("b")) ||
+            (game.turn() === "b" && piece.startsWith("w"))) return false;
+        selectSquare(source);
+        return true;
+      }
+
+      function onDrop(source, target) {
+        if (!completeMove(source, target)) return "snapback";
+      }
+
+      function onSnapEnd() {
+        boards.forEach((board) => board.position(game.fen(), false));
+      }
+
+      function createBoards() {
+        const config = {
+          position: "start",
+          draggable: true,
+          pieceTheme,
+          showNotation: true,
+          onDragStart,
+          onDrop,
+          onSnapEnd
+        };
+        boards = [
+          Chessboard("boardLeft", config),
+          Chessboard("boardRight", config)
+        ];
+        boardIds.forEach((id) => document.getElementById(id).addEventListener("click", handleSquareTap));
+      }
+
+      function applyLayout(nextLayout) {
+        layout = nextLayout;
+        elements.leftShell.className = "board-shell";
+        elements.rightShell.className = "board-shell";
+
+        if (layout === "opposed") {
+          elements.rightShell.classList.add("rotate-180");
+          elements.leftPerspective.textContent = "White perspective";
+          elements.rightPerspective.textContent = "Black perspective";
+        } else {
+          elements.leftShell.classList.add("rotate-90");
+          elements.rightShell.classList.add("rotate-neg-90");
+          elements.leftPerspective.textContent = "Clockwise";
+          elements.rightPerspective.textContent = "Counter-clockwise";
+        }
+
+        document.querySelectorAll(".segment").forEach((button) => {
+          button.classList.toggle("active", button.dataset.layout === layout);
+        });
+      }
+
+      function getSelectedTime() {
+        if (elements.timeMode.value === "custom") {
+          const minutes = Math.max(1, Math.min(180, Number(elements.customMinutes.value) || 1));
+          const increment = Math.max(0, Math.min(60, Number(elements.customIncrement.value) || 0));
+          return { initialMs: minutes * 60 * 1000, incrementMs: increment * 1000 };
+        }
+
+        const [minutes, increment] = elements.timeMode.value.split("|").map(Number);
+        return { initialMs: minutes * 60 * 1000, incrementMs: increment * 1000 };
+      }
+
+      function resetClock() {
+        stopClock();
+        const selected = getSelectedTime();
+        clock.initialMs = selected.initialMs;
+        clock.incrementMs = selected.incrementMs;
+        clock.remaining = { w: selected.initialMs, b: selected.initialMs };
+        clock.flagged = { w: false, b: false };
+        clock.active = null;
+        clock.started = false;
+        clock.lastTick = null;
+        elements.pauseClock.textContent = "Ⅱ";
+        elements.pauseClock.setAttribute("aria-label", "Pause clock");
+        renderClock();
+      }
+
+      function startClock(color) {
+        clock.active = color;
+        clock.running = true;
+        clock.started = true;
+        clock.lastTick = performance.now();
+        if (!clock.timer) clock.timer = window.setInterval(tickClock, 100);
+        elements.pauseClock.textContent = "Ⅱ";
+        elements.pauseClock.setAttribute("aria-label", "Pause clock");
+        renderClock();
+      }
+
+      function stopClock() {
+        if (clock.running) tickClock();
+        clock.running = false;
+        clock.lastTick = null;
+        if (clock.timer) {
+          window.clearInterval(clock.timer);
+          clock.timer = null;
+        }
+        renderClock();
+      }
+
+      function tickClock() {
+        if (!clock.running || !clock.active || clock.lastTick === null) return;
+        const now = performance.now();
+        const elapsed = now - clock.lastTick;
+        clock.lastTick = now;
+        clock.remaining[clock.active] = Math.max(0, clock.remaining[clock.active] - elapsed);
+        if (clock.remaining[clock.active] === 0) clock.flagged[clock.active] = true;
+        renderClock();
+      }
+
+      function advanceClock(movingColor) {
+        if (!clock.started) {
+          startClock(game.turn());
+          return;
+        }
+
+        tickClock();
+        clock.remaining[movingColor] += clock.incrementMs;
+        startClock(game.turn());
+      }
+
+      function toggleClock() {
+        if (!clock.started) return;
+        if (clock.running) {
+          stopClock();
+          elements.pauseClock.textContent = "▶";
+          elements.pauseClock.setAttribute("aria-label", "Resume clock");
+        } else {
+          startClock(clock.active || game.turn());
+        }
+      }
+
+      function formatTime(milliseconds) {
+        const safeMs = Math.max(0, milliseconds);
+        if (safeMs < 10000) {
+          const seconds = Math.floor(safeMs / 1000);
+          const tenths = Math.floor((safeMs % 1000) / 100);
+          return `0:${String(seconds).padStart(2, "0")}.${tenths}`;
+        }
+        const totalSeconds = Math.ceil(safeMs / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      }
+
+      function renderClock() {
+        elements.whiteTime.textContent = formatTime(clock.remaining.w);
+        elements.blackTime.textContent = formatTime(clock.remaining.b);
+        elements.whiteClock.classList.toggle("active", clock.running && clock.active === "w");
+        elements.blackClock.classList.toggle("active", clock.running && clock.active === "b");
+        elements.whiteClock.classList.toggle("flagged", clock.flagged.w);
+        elements.blackClock.classList.toggle("flagged", clock.flagged.b);
+      }
+
+      function updateStatus() {
+        let message;
+        if (game.in_checkmate()) {
+          message = `Checkmate · ${game.turn() === "w" ? "Black" : "White"} wins`;
+          stopClock();
+        } else if (game.in_draw()) {
+          message = "Draw";
+          stopClock();
+        } else {
+          message = `${game.turn() === "w" ? "White" : "Black"} to move`;
+          if (game.in_check()) message += " · Check";
+        }
+        elements.gameStatus.textContent = message;
+      }
+
+      function restartGame() {
+        game.reset();
+        selectedSquare = null;
+        legalTargets = [];
+        boards.forEach((board) => board.start(false));
+        clearHighlights();
+        resetClock();
+        updateStatus();
+      }
+
+      document.querySelectorAll(".segment").forEach((button) => {
+        button.addEventListener("click", () => applyLayout(button.dataset.layout));
+      });
+      document.getElementById("restartGame").addEventListener("click", restartGame);
+      document.getElementById("resetClock").addEventListener("click", resetClock);
+      elements.pauseClock.addEventListener("click", toggleClock);
+      elements.timeMode.addEventListener("change", () => {
+        elements.customTime.classList.toggle("visible", elements.timeMode.value === "custom");
+        resetClock();
+      });
+      [elements.customMinutes, elements.customIncrement].forEach((input) => {
+        input.addEventListener("change", resetClock);
+      });
+      window.addEventListener("resize", () => boards.forEach((board) => board.resize()));
+
+      createBoards();
+      applyLayout("opposed");
+      resetClock();
+      updateStatus();
+    })();
+  </script>
+</body>
+</html>
