@@ -26,6 +26,10 @@
       box-sizing: border-box;
     }
 
+    [x-cloak] {
+      display: none !important;
+    }
+
     html,
     body {
       width: 100%;
@@ -67,6 +71,8 @@
     }
 
     .topbar {
+      position: relative;
+      z-index: 20;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -74,10 +80,20 @@
       padding: 6px 8px;
     }
 
+    .brand-menu {
+      position: relative;
+    }
+
     .brand {
       display: flex;
       align-items: center;
       gap: 8px;
+      padding: 0;
+      border: 0;
+      color: inherit;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
     }
 
     .brand-mark {
@@ -105,24 +121,50 @@
       display: none;
     }
 
-    .restart-button {
-      display: inline-flex;
-      min-height: 38px;
+    .brand-chevron {
+      margin-left: 2px;
+      color: var(--muted);
+      font-size: 13px;
+      transition: transform 160ms ease;
+    }
+
+    .brand-chevron.open {
+      transform: rotate(180deg);
+    }
+
+    .title-menu {
+      position: absolute;
+      z-index: 30;
+      top: calc(100% + 7px);
+      left: 0;
+      min-width: 190px;
+      padding: 5px;
+      border: 1px solid var(--line);
+      background: rgba(255, 253, 248, 0.98);
+      border-radius: 12px;
+      box-shadow: 0 14px 32px rgba(36, 34, 31, 0.18);
+      backdrop-filter: blur(16px);
+    }
+
+    .menu-item {
+      display: flex;
+      width: 100%;
+      min-height: 40px;
       align-items: center;
       gap: 8px;
-      padding: 0 13px;
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.62);
-      border-radius: 999px;
+      padding: 0 11px;
+      border: 0;
+      background: transparent;
+      border-radius: 8px;
       cursor: pointer;
-      font-weight: 700;
+      font-weight: 600;
+      text-align: left;
       transition: 160ms ease;
     }
 
-    .restart-button:hover {
-      border-color: rgba(54, 47, 40, 0.28);
-      background: white;
-      transform: translateY(-1px);
+    .menu-item:hover {
+      color: var(--blue);
+      background: rgba(37, 99, 235, 0.08);
     }
 
     .control-deck {
@@ -139,7 +181,8 @@
     }
 
     .clock {
-      display: flex;
+      display: grid;
+      grid-template-columns: auto 1fr;
       min-width: 0;
       align-items: center;
       justify-content: space-between;
@@ -203,6 +246,32 @@
       text-align: right;
     }
 
+    .clock-drain {
+      grid-column: 1 / -1;
+      height: 4px;
+      overflow: hidden;
+      background: rgba(36, 34, 31, 0.12);
+      border-radius: 999px;
+    }
+
+    .clock-drain-fill {
+      width: 100%;
+      height: 100%;
+      background: var(--blue);
+      border-radius: inherit;
+      transform: scaleX(1);
+      transform-origin: left center;
+      transition: transform 100ms linear, background-color 180ms ease;
+    }
+
+    .clock.black .clock-drain-fill {
+      background: #3f3d39;
+    }
+
+    .clock.flagged .clock-drain-fill {
+      background: var(--red);
+    }
+
     .clock.flagged .clock-time {
       color: var(--red);
     }
@@ -215,6 +284,7 @@
 
     .clock-controls {
       display: flex;
+      order: 2;
       align-items: center;
       gap: 4px;
     }
@@ -391,7 +461,7 @@
     }
 
     .board-shell.rotate-neg-90 {
-      transform: rotate(-90deg);
+      transform: rotate(270deg);
     }
 
     .board-shell.rotate-180 {
@@ -484,11 +554,6 @@
         grid-row: 1;
       }
 
-      .restart-button {
-        padding: 0 13px;
-        font-size: 13px;
-      }
-
       .control-deck {
         grid-row: 2;
         gap: 4px;
@@ -520,35 +585,54 @@
   </style>
 </head>
 <body>
-  <main class="app">
+  <main class="app" x-data="chessTouchUi">
     <header class="topbar">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">♞</div>
-        <div>
-          <h1>Chess Touch</h1>
-          <p>One game · Two perspectives</p>
+      <div class="brand-menu">
+        <button
+          class="brand"
+          type="button"
+          @click="menuOpen = !menuOpen"
+          :aria-expanded="menuOpen"
+          aria-haspopup="menu"
+        >
+          <div class="brand-mark" aria-hidden="true">♞</div>
+          <div>
+            <h1>Chess Touch</h1>
+            <p>One game · Two perspectives</p>
+          </div>
+          <span class="brand-chevron" :class="{ open: menuOpen }" aria-hidden="true">⌄</span>
+        </button>
+        <div
+          class="title-menu"
+          role="menu"
+          x-cloak
+          x-show="menuOpen"
+          x-transition.opacity.duration.150ms
+          @click.outside="menuOpen = false"
+          @keydown.escape.window="menuOpen = false"
+        >
+          <button class="menu-item" id="restartGame" type="button" role="menuitem" @click="menuOpen = false">
+            <span aria-hidden="true">↻</span>
+            Restart game
+          </button>
         </div>
       </div>
-      <button class="restart-button" id="restartGame" type="button">
-        <span aria-hidden="true">↻</span>
-        Restart game
-      </button>
     </header>
 
     <section class="control-deck" aria-label="Chess clocks">
-      <div class="clock white" id="whiteClock">
-        <div class="clock-player"><span class="player-dot"></span>White</div>
-        <div class="clock-time" id="whiteTime">05:00</div>
-      </div>
+      <template x-for="clock in clocks" :key="clock.id">
+        <div class="clock" :class="clock.color" :id="clock.id" :style="{ order: clock.order }">
+          <div class="clock-player"><span class="player-dot"></span><span x-text="clock.label"></span></div>
+          <div class="clock-time" :id="clock.timeId">05:00</div>
+          <div class="clock-drain" aria-hidden="true">
+            <div class="clock-drain-fill" :id="clock.drainId"></div>
+          </div>
+        </div>
+      </template>
 
       <div class="clock-controls">
         <button class="icon-button" id="pauseClock" type="button" aria-label="Pause clock" title="Pause clock">Ⅱ</button>
         <button class="icon-button" id="resetClock" type="button" aria-label="Reset clock" title="Reset clock">↺</button>
-      </div>
-
-      <div class="clock black" id="blackClock">
-        <div class="clock-player"><span class="player-dot"></span>Black</div>
-        <div class="clock-time" id="blackTime">05:00</div>
       </div>
     </section>
 
@@ -578,23 +662,27 @@
       <div class="field-group">
         <span class="field-label">Board layout</span>
         <div class="segmented" role="group" aria-label="Board layout">
-          <button class="segment active" type="button" data-layout="opposed">Opposed</button>
-          <button class="segment" type="button" data-layout="sideways">Sideways</button>
+          <template x-for="option in layouts" :key="option.value">
+            <button
+              class="segment"
+              :class="{ active: option.value === 'opposed' }"
+              type="button"
+              :data-layout="option.value"
+              x-text="option.label"
+            ></button>
+          </template>
         </div>
       </div>
     </section>
 
     <section class="boards-stage">
-      <div class="board-column">
-        <div class="board-shell" id="leftShell">
-          <div class="board" id="boardLeft"></div>
+      <template x-for="board in boardViews" :key="board.id">
+        <div class="board-column">
+          <div class="board-shell" :class="board.shellClass" :id="board.shellId">
+            <div class="board" :id="board.id"></div>
+          </div>
         </div>
-      </div>
-      <div class="board-column">
-        <div class="board-shell rotate-180" id="rightShell">
-          <div class="board" id="boardRight"></div>
-        </div>
-      </div>
+      </template>
     </section>
 
     <div class="statusbar" role="status" aria-live="polite">
@@ -603,11 +691,31 @@
     </div>
   </main>
 
+  <script>
+    document.addEventListener("alpine:init", () => {
+      Alpine.data("chessTouchUi", () => ({
+        menuOpen: false,
+        clocks: [
+          { id: "whiteClock", timeId: "whiteTime", drainId: "whiteDrain", label: "White", color: "white", order: 1 },
+          { id: "blackClock", timeId: "blackTime", drainId: "blackDrain", label: "Black", color: "black", order: 3 }
+        ],
+        layouts: [
+          { value: "opposed", label: "Opposed" },
+          { value: "sideways", label: "Sideways" }
+        ],
+        boardViews: [
+          { id: "boardLeft", shellId: "leftShell", shellClass: "" },
+          { id: "boardRight", shellId: "rightShell", shellClass: "rotate-180" }
+        ]
+      }));
+    });
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
   <script>
-    (() => {
+    document.addEventListener("alpine:initialized", () => {
       const game = new Chess();
       const boardIds = ["boardLeft", "boardRight"];
       const pieceTheme = "https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png";
@@ -637,6 +745,8 @@
         blackClock: document.getElementById("blackClock"),
         whiteTime: document.getElementById("whiteTime"),
         blackTime: document.getElementById("blackTime"),
+        whiteDrain: document.getElementById("whiteDrain"),
+        blackDrain: document.getElementById("blackDrain"),
         pauseClock: document.getElementById("pauseClock"),
         timeMode: document.getElementById("timeMode"),
         customTime: document.getElementById("customTime"),
@@ -717,7 +827,7 @@
       function rotationForBoard(boardRoot) {
         const shell = boardRoot.closest(".board-shell");
         if (shell.classList.contains("rotate-90")) return 90;
-        if (shell.classList.contains("rotate-neg-90")) return -90;
+        if (shell.classList.contains("rotate-neg-90")) return 270;
         if (shell.classList.contains("rotate-180")) return 180;
         return 0;
       }
@@ -985,6 +1095,10 @@
       function renderClock() {
         elements.whiteTime.textContent = formatTime(clock.remaining.w);
         elements.blackTime.textContent = formatTime(clock.remaining.b);
+        const whiteRatio = Math.max(0, Math.min(1, clock.remaining.w / clock.initialMs));
+        const blackRatio = Math.max(0, Math.min(1, clock.remaining.b / clock.initialMs));
+        elements.whiteDrain.style.transform = `scaleX(${whiteRatio})`;
+        elements.blackDrain.style.transform = `scaleX(${blackRatio})`;
         elements.whiteClock.classList.toggle("active", clock.running && clock.active === "w");
         elements.blackClock.classList.toggle("active", clock.running && clock.active === "b");
         elements.whiteClock.classList.toggle("flagged", clock.flagged.w);
@@ -1043,7 +1157,7 @@
         layoutObserver.observe(document.querySelector(selector));
       });
       document.fonts?.ready.then(resizeLayout);
-    })();
+    });
   </script>
 </body>
 </html>
