@@ -60,7 +60,7 @@
 
     .app {
       display: grid;
-      grid-template-columns: auto minmax(440px, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
       width: 100%;
       height: 100vh;
       height: 100dvh;
@@ -78,6 +78,7 @@
       justify-content: space-between;
       gap: 12px;
       padding: 6px 8px;
+      justify-self: start;
     }
 
     .brand-menu {
@@ -172,6 +173,7 @@
       grid-template-columns: minmax(140px, 1fr) auto minmax(140px, 1fr);
       gap: 6px;
       align-items: center;
+      justify-self: center;
       padding: 4px;
       border: 1px solid rgba(255, 255, 255, 0.62);
       background: var(--panel);
@@ -181,9 +183,13 @@
     }
 
     .clock {
+      --time-ratio: 1;
+      position: relative;
+      isolation: isolate;
       display: grid;
       grid-template-columns: auto 1fr;
       min-width: 0;
+      overflow: hidden;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
@@ -194,10 +200,30 @@
       transition: 180ms ease;
     }
 
+    .clock::before {
+      position: absolute;
+      z-index: 0;
+      inset: 0;
+      content: "";
+      background: rgba(37, 99, 235, 0.18);
+      transform: scaleX(var(--time-ratio));
+      transform-origin: left center;
+      transition: transform 100ms linear, background-color 180ms ease;
+    }
+
+    .clock > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .clock.active::before {
+      background: rgba(34, 197, 94, 0.28);
+    }
+
     .clock.active {
-      border-color: rgba(37, 99, 235, 0.52);
-      background: rgba(232, 240, 255, 0.9);
-      box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08);
+      border-color: rgba(22, 163, 74, 0.52);
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.08);
     }
 
     .clock.flagged {
@@ -246,32 +272,6 @@
       text-align: right;
     }
 
-    .clock-drain {
-      grid-column: 1 / -1;
-      height: 4px;
-      overflow: hidden;
-      background: rgba(36, 34, 31, 0.12);
-      border-radius: 999px;
-    }
-
-    .clock-drain-fill {
-      width: 100%;
-      height: 100%;
-      background: var(--blue);
-      border-radius: inherit;
-      transform: scaleX(1);
-      transform-origin: left center;
-      transition: transform 100ms linear, background-color 180ms ease;
-    }
-
-    .clock.black .clock-drain-fill {
-      background: #3f3d39;
-    }
-
-    .clock.flagged .clock-drain-fill {
-      background: var(--red);
-    }
-
     .clock.flagged .clock-time {
       color: var(--red);
     }
@@ -315,6 +315,7 @@
       justify-content: flex-end;
       gap: 8px;
       padding: 4px 8px;
+      justify-self: end;
     }
 
     .field-group {
@@ -538,6 +539,7 @@
       .control-deck {
         grid-column: 1 / -1;
         grid-row: 2;
+        justify-self: center;
       }
 
       .boards-stage {
@@ -624,9 +626,6 @@
         <div class="clock" :class="clock.color" :id="clock.id" :style="{ order: clock.order }">
           <div class="clock-player"><span class="player-dot"></span><span x-text="clock.label"></span></div>
           <div class="clock-time" :id="clock.timeId">05:00</div>
-          <div class="clock-drain" aria-hidden="true">
-            <div class="clock-drain-fill" :id="clock.drainId"></div>
-          </div>
         </div>
       </template>
 
@@ -638,9 +637,8 @@
 
     <section class="mode-row" aria-label="Game settings">
       <div class="field-group">
-        <label class="field-label" for="timeMode">Clock</label>
         <div class="select-wrap">
-          <select id="timeMode">
+          <select id="timeMode" aria-label="Clock mode">
             <option value="1|0">Bullet · 1 min</option>
             <option value="3|0">Blitz · 3 min</option>
             <option value="3|2">Blitz · 3 + 2</option>
@@ -658,9 +656,8 @@
           <span class="number-unit">sec inc.</span>
         </div>
       </div>
-
       <div class="field-group">
-        <span class="field-label">Board layout</span>
+      <div class="field-group">
         <div class="segmented" role="group" aria-label="Board layout">
           <template x-for="option in layouts" :key="option.value">
             <button
@@ -696,8 +693,8 @@
       Alpine.data("chessTouchUi", () => ({
         menuOpen: false,
         clocks: [
-          { id: "whiteClock", timeId: "whiteTime", drainId: "whiteDrain", label: "White", color: "white", order: 1 },
-          { id: "blackClock", timeId: "blackTime", drainId: "blackDrain", label: "Black", color: "black", order: 3 }
+          { id: "whiteClock", timeId: "whiteTime", label: "White", color: "white", order: 1 },
+          { id: "blackClock", timeId: "blackTime", label: "Black", color: "black", order: 3 }
         ],
         layouts: [
           { value: "opposed", label: "Opposed" },
@@ -745,8 +742,6 @@
         blackClock: document.getElementById("blackClock"),
         whiteTime: document.getElementById("whiteTime"),
         blackTime: document.getElementById("blackTime"),
-        whiteDrain: document.getElementById("whiteDrain"),
-        blackDrain: document.getElementById("blackDrain"),
         pauseClock: document.getElementById("pauseClock"),
         timeMode: document.getElementById("timeMode"),
         customTime: document.getElementById("customTime"),
@@ -1097,8 +1092,8 @@
         elements.blackTime.textContent = formatTime(clock.remaining.b);
         const whiteRatio = Math.max(0, Math.min(1, clock.remaining.w / clock.initialMs));
         const blackRatio = Math.max(0, Math.min(1, clock.remaining.b / clock.initialMs));
-        elements.whiteDrain.style.transform = `scaleX(${whiteRatio})`;
-        elements.blackDrain.style.transform = `scaleX(${blackRatio})`;
+        elements.whiteClock.style.setProperty("--time-ratio", whiteRatio);
+        elements.blackClock.style.setProperty("--time-ratio", blackRatio);
         elements.whiteClock.classList.toggle("active", clock.running && clock.active === "w");
         elements.blackClock.classList.toggle("active", clock.running && clock.active === "b");
         elements.whiteClock.classList.toggle("flagged", clock.flagged.w);
