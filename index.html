@@ -20,6 +20,7 @@
       --red: #c93f3f;
       --shadow: 0 24px 60px rgba(56, 47, 34, 0.12);
       --board-size: 50vw;
+      --captures-width: 52px;
     }
 
     * {
@@ -309,13 +310,28 @@
       transform: translateY(-1px);
     }
 
+    .fullscreen-button {
+      position: fixed;
+      z-index: 25;
+      top: 8px;
+      right: 8px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 8px 24px rgba(56, 47, 34, 0.1);
+      backdrop-filter: blur(12px);
+    }
+
+    .fullscreen-button.active {
+      border-color: rgba(37, 99, 235, 0.4);
+      color: var(--blue);
+    }
+
     .mode-row {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: flex-end;
       gap: 8px;
-      padding: 4px 8px;
+      padding: 4px 54px 4px 8px;
       justify-self: end;
     }
 
@@ -415,7 +431,7 @@
 
     .boards-stage {
       display: grid;
-      grid-template-columns: repeat(2, var(--board-size));
+      grid-template-columns: repeat(2, calc(var(--board-size) + var(--captures-width)));
       grid-column: 1 / -1;
       gap: 0;
       align-items: center;
@@ -426,8 +442,25 @@
     }
 
     .board-column {
-      width: var(--board-size);
+      display: grid;
+      width: calc(var(--board-size) + var(--captures-width));
       height: var(--board-size);
+      grid-template-columns: var(--captures-width) var(--board-size);
+      align-items: stretch;
+    }
+
+    .board-column.tray-right {
+      grid-template-columns: var(--board-size) var(--captures-width);
+    }
+
+    .board-column.tray-right .board-shell {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .board-column.tray-right .captures-panel {
+      grid-column: 2;
+      grid-row: 1;
     }
 
     .board-shell {
@@ -490,6 +523,10 @@
       cursor: pointer;
     }
 
+    .board .square-55d63.last-move {
+      background-image: linear-gradient(rgba(249, 224, 92, 0.48), rgba(249, 224, 92, 0.48));
+    }
+
     .board .square-55d63.selected-square {
       box-shadow: inset 0 0 0 5px rgba(40, 104, 213, 0.78);
     }
@@ -518,6 +555,144 @@
       border-radius: 50%;
     }
 
+    .board .square-55d63 > img {
+      position: relative;
+      z-index: 2;
+    }
+
+    .board .square-55d63.king-in-check::before {
+      position: absolute;
+      z-index: 1;
+      inset: -18%;
+      content: "";
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(255, 52, 52, 0.92) 0 19%, rgba(218, 28, 28, 0.7) 33%, rgba(201, 31, 31, 0.3) 52%, transparent 70%);
+      animation: check-bloom 1.35s ease-in-out infinite;
+    }
+
+    @keyframes check-bloom {
+      50% {
+        opacity: 0.68;
+        transform: scale(0.88);
+      }
+    }
+
+    .board .square-55d63.mating-king::after,
+    .board .square-55d63.losing-king::after {
+      position: absolute;
+      z-index: 6;
+      top: 4%;
+      right: 3%;
+      display: grid;
+      width: 34%;
+      height: 34%;
+      content: "♛";
+      place-items: center;
+      pointer-events: none;
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      color: #fff;
+      background: #16803c;
+      border-radius: 50%;
+      box-shadow: 0 3px 9px rgba(16, 76, 39, 0.42);
+      font-size: clamp(10px, 1.2vw, 18px);
+      line-height: 1;
+    }
+
+    .board .square-55d63.losing-king::after {
+      content: "×";
+      background: var(--red);
+      box-shadow: 0 3px 9px rgba(132, 27, 27, 0.42);
+      font-family: "DM Sans", sans-serif;
+      font-weight: 700;
+    }
+
+    .captures-panel {
+      --piece-rotation: 0deg;
+      position: relative;
+      display: grid;
+      min-width: 0;
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      padding: 8px 6px;
+      border: 1px solid var(--line);
+      background: rgba(255, 253, 248, 0.72);
+      box-shadow: 0 8px 24px rgba(56, 47, 34, 0.07);
+      backdrop-filter: blur(12px);
+    }
+
+    .captures-panel::after {
+      position: absolute;
+      top: 50%;
+      right: 6px;
+      left: 6px;
+      height: 1px;
+      content: "";
+      pointer-events: none;
+      background: var(--line);
+    }
+
+    .captures-panel.tray-left {
+      border-right: 0;
+      border-radius: 12px 0 0 12px;
+    }
+
+    .captures-panel.tray-right {
+      border-left: 0;
+      border-radius: 0 12px 12px 0;
+    }
+
+    .captures-group {
+      display: flex;
+      width: 100%;
+      min-width: 0;
+      min-height: 0;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .captures-group.captured-white {
+      grid-row: 1;
+      align-items: flex-end;
+    }
+
+    .captures-group.captured-black {
+      grid-row: 2;
+      align-items: flex-start;
+    }
+
+    .captures-panel.colors-swapped .captures-group.captured-white {
+      grid-row: 2;
+      align-items: flex-start;
+    }
+
+    .captures-panel.colors-swapped .captures-group.captured-black {
+      grid-row: 1;
+      align-items: flex-end;
+    }
+
+    .captures-pieces {
+      display: flex;
+      min-height: 0;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .captured-piece-image {
+      width: clamp(9px, calc(var(--board-size) / 24), 20px);
+      height: clamp(9px, calc(var(--board-size) / 24), 20px);
+      flex: 0 0 auto;
+      object-fit: contain;
+      transform: rotate(var(--piece-rotation));
+      transition: transform 420ms cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .captures-empty {
+      color: rgba(118, 113, 107, 0.48);
+      font-family: "DM Sans", sans-serif;
+      font-size: 15px;
+    }
+
     @media (max-width: 1200px) {
       .app {
         grid-template-columns: 1fr auto;
@@ -535,6 +710,10 @@
     }
 
     @media (max-width: 680px) {
+      :root {
+        --captures-width: 40px;
+      }
+
       .app {
         grid-template-columns: 1fr;
       }
@@ -604,9 +783,28 @@
             <span aria-hidden="true">↻</span>
             Restart game
           </button>
+          <button
+            class="menu-item"
+            id="swapSides"
+            type="button"
+            role="menuitem"
+            aria-pressed="false"
+            @click="menuOpen = false"
+          >
+            <span aria-hidden="true">⇄</span>
+            Swap Black / White positions
+          </button>
         </div>
       </div>
     </header>
+
+    <button
+      class="icon-button fullscreen-button"
+      id="fullscreenButton"
+      type="button"
+      aria-label="Enter fullscreen"
+      title="Enter fullscreen"
+    >⛶</button>
 
     <section class="control-deck" aria-label="Chess clocks">
       <template x-for="clock in clocks" :key="clock.id">
@@ -644,7 +842,6 @@
         </div>
       </div>
       <div class="field-group">
-      <div class="field-group">
         <div class="segmented" role="group" aria-label="Board layout">
           <template x-for="option in layouts" :key="option.value">
             <button
@@ -661,7 +858,20 @@
 
     <section class="boards-stage">
       <template x-for="board in boardViews" :key="board.id">
-        <div class="board-column">
+        <div class="board-column" :class="{ 'tray-right': board.traySide === 'right' }">
+          <aside
+            class="captures-panel"
+            :class="`tray-${board.traySide}`"
+            :id="board.capturesId"
+            :aria-label="`Captured pieces beside ${board.label}`"
+          >
+            <div class="captures-group captured-white">
+              <div class="captures-pieces" :id="`${board.id}BlackCaptures`"><span class="captures-empty">—</span></div>
+            </div>
+            <div class="captures-group captured-black">
+              <div class="captures-pieces" :id="`${board.id}WhiteCaptures`"><span class="captures-empty">—</span></div>
+            </div>
+          </aside>
           <div class="board-shell" :class="board.shellClass" :id="board.shellId">
             <div class="board" :id="board.id"></div>
           </div>
@@ -684,8 +894,8 @@
           { value: "sideways", label: "Sideways" }
         ],
         boardViews: [
-          { id: "boardLeft", shellId: "leftShell", shellClass: "" },
-          { id: "boardRight", shellId: "rightShell", shellClass: "rotate-180" }
+          { id: "boardLeft", label: "left board", traySide: "left", capturesId: "leftCaptures", shellId: "leftShell", shellClass: "" },
+          { id: "boardRight", label: "right board", traySide: "right", capturesId: "rightCaptures", shellId: "rightShell", shellClass: "rotate-180" }
         ]
       }));
     });
@@ -699,10 +909,13 @@
       const game = new Chess();
       const boardIds = ["boardLeft", "boardRight"];
       const pieceTheme = "https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png";
+      const pieceNames = { p: "pawn", n: "knight", b: "bishop", r: "rook", q: "queen" };
+      const pieceValueOrder = ["q", "r", "b", "n", "p"];
       let boards = [];
       let selectedSquare = null;
       let legalTargets = [];
       let layout = "opposed";
+      let sidesSwapped = false;
       let pointerDrag = null;
 
       const clock = {
@@ -720,10 +933,14 @@
       const elements = {
         leftShell: document.getElementById("leftShell"),
         rightShell: document.getElementById("rightShell"),
+        leftCaptures: document.getElementById("leftCaptures"),
+        rightCaptures: document.getElementById("rightCaptures"),
         whiteClock: document.getElementById("whiteClock"),
         blackClock: document.getElementById("blackClock"),
         whiteTime: document.getElementById("whiteTime"),
         blackTime: document.getElementById("blackTime"),
+        fullscreenButton: document.getElementById("fullscreenButton"),
+        swapSides: document.getElementById("swapSides"),
         pauseClock: document.getElementById("pauseClock"),
         timeMode: document.getElementById("timeMode"),
         customTime: document.getElementById("customTime"),
@@ -736,6 +953,26 @@
         if (!square) return null;
         const squareClass = Array.from(square.classList).find((name) => /^square-[a-h][1-8]$/.test(name));
         return squareClass ? squareClass.slice(7) : null;
+      }
+
+      function updateFullscreenButton() {
+        const active = Boolean(document.fullscreenElement);
+        const label = active ? "Exit fullscreen" : "Enter fullscreen";
+        elements.fullscreenButton.classList.toggle("active", active);
+        elements.fullscreenButton.setAttribute("aria-label", label);
+        elements.fullscreenButton.setAttribute("title", label);
+      }
+
+      async function toggleFullscreen() {
+        try {
+          if (document.fullscreenElement) {
+            await document.exitFullscreen();
+          } else {
+            await document.documentElement.requestFullscreen();
+          }
+        } catch (error) {
+          console.error("Unable to change fullscreen mode.", error);
+        }
       }
 
       function clearHighlights() {
@@ -783,6 +1020,101 @@
         advanceClock(movingColor);
         updateStatus();
         return true;
+      }
+
+      function findKingSquare(color) {
+        for (const file of "abcdefgh") {
+          for (let rank = 1; rank <= 8; rank += 1) {
+            const square = `${file}${rank}`;
+            const piece = game.get(square);
+            if (piece?.type === "k" && piece.color === color) return square;
+          }
+        }
+        return null;
+      }
+
+      function paintGameMarkers() {
+        document.querySelectorAll(".king-in-check, .mating-king, .losing-king").forEach((square) => {
+          square.classList.remove("king-in-check", "mating-king", "losing-king");
+        });
+
+        if (game.in_check()) {
+          const checkedKing = findKingSquare(game.turn());
+          if (checkedKing) {
+            boardIds.forEach((boardId) => {
+              document.getElementById(boardId).querySelector(`.square-${checkedKing}`)?.classList.add("king-in-check");
+            });
+          }
+        }
+
+        if (game.in_checkmate()) {
+          const winner = game.turn() === "w" ? "b" : "w";
+          const winningKing = findKingSquare(winner);
+          const losingKing = findKingSquare(game.turn());
+          if (winningKing) {
+            boardIds.forEach((boardId) => {
+              document.getElementById(boardId).querySelector(`.square-${winningKing}`)?.classList.add("mating-king");
+            });
+          }
+          if (losingKing) {
+            boardIds.forEach((boardId) => {
+              document.getElementById(boardId).querySelector(`.square-${losingKing}`)?.classList.add("losing-king");
+            });
+          }
+        }
+      }
+
+      function paintLastMove() {
+        document.querySelectorAll(".last-move").forEach((square) => {
+          square.classList.remove("last-move");
+        });
+
+        const history = game.history({ verbose: true });
+        const lastMove = history[history.length - 1];
+        if (!lastMove) return;
+
+        boardIds.forEach((boardId) => {
+          const boardRoot = document.getElementById(boardId);
+          boardRoot.querySelector(`.square-${lastMove.from}`)?.classList.add("last-move");
+          boardRoot.querySelector(`.square-${lastMove.to}`)?.classList.add("last-move");
+        });
+      }
+
+      function paintBoardState() {
+        paintGameMarkers();
+        paintLastMove();
+      }
+
+      function renderCapturedPieces() {
+        const captures = { w: [], b: [] };
+        game.history({ verbose: true }).forEach((move) => {
+          if (!move.captured) return;
+          const capturedColor = move.color === "w" ? "b" : "w";
+          captures[move.color].push({
+            color: capturedColor,
+            type: move.captured,
+            code: `${capturedColor}${move.captured.toUpperCase()}`
+          });
+        });
+
+        ["w", "b"].forEach((capturingColor) => {
+          const direction = capturingColor === "w" ? 1 : -1;
+          const orderedCaptures = [...captures[capturingColor]].sort(
+            (first, second) => direction * (pieceValueOrder.indexOf(first.type) - pieceValueOrder.indexOf(second.type))
+          );
+          const markup = orderedCaptures
+            .map(({ color, type, code }) => {
+              const src = pieceTheme.replace("{piece}", code);
+              const colorName = color === "w" ? "white" : "black";
+              return `<img class="captured-piece-image" src="${src}" alt="Captured ${colorName} ${pieceNames[type]}">`;
+            })
+            .join("");
+          const content = markup || '<span class="captures-empty">—</span>';
+          const suffix = capturingColor === "w" ? "WhiteCaptures" : "BlackCaptures";
+          boardIds.forEach((boardId) => {
+            document.getElementById(`${boardId}${suffix}`).innerHTML = content;
+          });
+        });
       }
 
       function handleSquareTap(square) {
@@ -940,7 +1272,8 @@
           ];
           const controlsBottom = Math.max(...controls.map((element) => element.getBoundingClientRect().bottom));
           const availableHeight = Math.max(1, window.innerHeight - controlsBottom - 6);
-          const boardSize = Math.floor(Math.min(window.innerWidth / 2, availableHeight));
+          const capturesWidth = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--captures-width")) || 0;
+          const boardSize = Math.floor(Math.min((window.innerWidth - capturesWidth * 2) / 2, availableHeight));
 
           document.documentElement.style.setProperty("--board-size", `${boardSize}px`);
           boards.forEach((board) => board.resize());
@@ -954,14 +1287,37 @@
 
         if (layout === "opposed") {
           elements.rightShell.classList.add("rotate-180");
+          elements.leftCaptures.style.setProperty("--piece-rotation", "0deg");
+          elements.rightCaptures.style.setProperty("--piece-rotation", "180deg");
         } else {
           elements.leftShell.classList.add("rotate-90");
           elements.rightShell.classList.add("rotate-neg-90");
+          elements.leftCaptures.style.setProperty("--piece-rotation", "90deg");
+          elements.rightCaptures.style.setProperty("--piece-rotation", "270deg");
         }
 
         document.querySelectorAll(".segment").forEach((button) => {
           button.classList.toggle("active", button.dataset.layout === layout);
         });
+      }
+
+      function applySidePositions() {
+        boards[0].orientation(sidesSwapped ? "black" : "white");
+        boards[1].orientation(sidesSwapped ? "white" : "black");
+        elements.whiteClock.style.order = sidesSwapped ? 3 : 1;
+        elements.blackClock.style.order = sidesSwapped ? 1 : 3;
+        elements.leftCaptures.classList.toggle("colors-swapped", sidesSwapped);
+        elements.rightCaptures.classList.toggle("colors-swapped", sidesSwapped);
+        elements.swapSides.setAttribute("aria-pressed", String(sidesSwapped));
+        window.setTimeout(() => {
+          paintHighlights();
+          paintBoardState();
+        }, 0);
+      }
+
+      function toggleSidePositions() {
+        sidesSwapped = !sidesSwapped;
+        applySidePositions();
       }
 
       function getSelectedTime() {
@@ -1082,6 +1438,8 @@
       }
 
       function updateStatus() {
+        window.setTimeout(paintBoardState, 0);
+        renderCapturedPieces();
         if (game.in_checkmate()) {
           stopClock();
         } else if (game.in_draw()) {
@@ -1103,7 +1461,13 @@
         button.addEventListener("click", () => applyLayout(button.dataset.layout));
       });
       document.getElementById("restartGame").addEventListener("click", restartGame);
+      elements.swapSides.addEventListener("click", toggleSidePositions);
       document.getElementById("resetClock").addEventListener("click", resetClock);
+      elements.fullscreenButton.addEventListener("click", toggleFullscreen);
+      document.addEventListener("fullscreenchange", () => {
+        updateFullscreenButton();
+        resizeLayout();
+      });
       elements.pauseClock.addEventListener("click", toggleClock);
       elements.timeMode.addEventListener("change", () => {
         elements.customTime.classList.toggle("visible", elements.timeMode.value === "custom");
@@ -1117,6 +1481,8 @@
 
       createBoards();
       applyLayout("opposed");
+      applySidePositions();
+      updateFullscreenButton();
       resetClock();
       updateStatus();
       resizeLayout();
