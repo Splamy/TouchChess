@@ -19,7 +19,7 @@
       --blue-dark: #1745ab;
       --red: #c93f3f;
       --shadow: 0 24px 60px rgba(56, 47, 34, 0.12);
-      --board-size: min(39vw, 510px);
+      --board-size: 50vw;
     }
 
     * {
@@ -49,35 +49,38 @@
     }
 
     .app {
-      width: min(1420px, 100%);
+      display: grid;
+      grid-template-columns: auto minmax(440px, 1fr) auto;
+      width: 100%;
       min-height: 100vh;
-      margin: 0 auto;
-      padding: 28px clamp(18px, 4vw, 64px) 40px;
+      align-items: center;
+      gap: 6px;
+      padding: 0;
     }
 
     .topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 24px;
-      margin-bottom: 28px;
+      gap: 12px;
+      padding: 6px 8px;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 13px;
+      gap: 8px;
     }
 
     .brand-mark {
       display: grid;
-      width: 46px;
-      height: 46px;
+      width: 38px;
+      height: 38px;
       place-items: center;
       color: white;
       background: var(--ink);
-      border-radius: 14px;
-      font-size: 28px;
+      border-radius: 11px;
+      font-size: 23px;
       line-height: 1;
       box-shadow: 0 8px 22px rgba(36, 34, 31, 0.18);
     }
@@ -85,26 +88,21 @@
     .brand h1 {
       margin: 0;
       font-family: "DM Serif Display", serif;
-      font-size: clamp(27px, 3vw, 38px);
+      font-size: 25px;
       font-weight: 400;
       letter-spacing: -0.02em;
     }
 
     .brand p {
-      margin: 2px 0 0;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
+      display: none;
     }
 
     .restart-button {
       display: inline-flex;
-      min-height: 44px;
+      min-height: 38px;
       align-items: center;
       gap: 8px;
-      padding: 0 18px;
+      padding: 0 13px;
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.62);
       border-radius: 999px;
@@ -121,15 +119,14 @@
 
     .control-deck {
       display: grid;
-      grid-template-columns: minmax(300px, 1fr) auto minmax(300px, 1fr);
-      gap: 24px;
+      grid-template-columns: minmax(140px, 1fr) auto minmax(140px, 1fr);
+      gap: 6px;
       align-items: center;
-      margin-bottom: 34px;
-      padding: 20px;
+      padding: 4px;
       border: 1px solid rgba(255, 255, 255, 0.62);
       background: var(--panel);
-      border-radius: 24px;
-      box-shadow: var(--shadow);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(56, 47, 34, 0.08);
       backdrop-filter: blur(18px);
     }
 
@@ -138,11 +135,11 @@
       min-width: 0;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      padding: 15px 18px;
+      gap: 8px;
+      padding: 8px 10px;
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.55);
-      border-radius: 17px;
+      border-radius: 10px;
       transition: 180ms ease;
     }
 
@@ -166,17 +163,17 @@
       display: flex;
       min-width: 0;
       align-items: center;
-      gap: 11px;
+      gap: 6px;
       color: var(--muted);
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
     .player-dot {
-      width: 14px;
-      height: 14px;
+      width: 11px;
+      height: 11px;
       flex: none;
       border: 2px solid #d4d0ca;
       background: #fff;
@@ -189,8 +186,8 @@
     }
 
     .clock-time {
-      min-width: 108px;
-      font-size: clamp(28px, 3vw, 40px);
+      min-width: 76px;
+      font-size: clamp(24px, 2.1vw, 32px);
       font-variant-numeric: tabular-nums;
       font-weight: 700;
       letter-spacing: -0.05em;
@@ -211,17 +208,17 @@
     .clock-controls {
       display: flex;
       align-items: center;
-      gap: 9px;
+      gap: 4px;
     }
 
     .icon-button {
       display: grid;
-      width: 44px;
-      height: 44px;
+      width: 38px;
+      height: 38px;
       place-items: center;
       border: 1px solid var(--line);
       background: white;
-      border-radius: 13px;
+      border-radius: 10px;
       cursor: pointer;
       font-size: 17px;
       transition: 160ms ease;
@@ -236,17 +233,17 @@
     .mode-row {
       display: flex;
       flex-wrap: wrap;
-      align-items: end;
-      justify-content: space-between;
-      gap: 18px;
-      margin-bottom: 22px;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 4px 8px;
     }
 
     .field-group {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 9px;
+      gap: 6px;
     }
 
     .field-label {
@@ -264,7 +261,7 @@
 
     select,
     .number-input {
-      height: 42px;
+      height: 38px;
       border: 1px solid var(--line);
       outline: none;
       background: rgba(255, 255, 255, 0.75);
@@ -274,7 +271,7 @@
     }
 
     select {
-      min-width: 174px;
+      min-width: 158px;
       padding: 0 38px 0 13px;
       appearance: none;
       cursor: pointer;
@@ -339,47 +336,23 @@
     .boards-stage {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: clamp(32px, 6vw, 86px);
+      grid-column: 1 / -1;
+      gap: 0;
       align-items: center;
       justify-items: center;
-      padding: 12px 0 24px;
+      padding: 0;
     }
 
     .board-column {
-      display: grid;
       width: 100%;
-      justify-items: center;
-      gap: 15px;
-    }
-
-    .board-meta {
-      display: flex;
-      width: var(--board-size);
-      align-items: center;
-      justify-content: space-between;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .board-meta strong {
-      color: var(--ink);
-      font-size: 14px;
-      letter-spacing: 0;
-      text-transform: none;
     }
 
     .board-shell {
       width: var(--board-size);
       height: var(--board-size);
-      padding: 9px;
-      background: #443f38;
-      border-radius: 7px;
-      box-shadow:
-        0 22px 45px rgba(50, 43, 32, 0.18),
-        0 2px 4px rgba(50, 43, 32, 0.18);
+      padding: 0;
+      border-radius: 0;
+      box-shadow: none;
       transition: transform 420ms cubic-bezier(.2, .8, .2, 1);
     }
 
@@ -456,12 +429,13 @@
     }
 
     .statusbar {
+      grid-column: 1 / -1;
       display: flex;
       min-height: 32px;
       align-items: center;
       justify-content: center;
       gap: 9px;
-      margin-top: 5px;
+      margin: 0;
       color: var(--muted);
       font-size: 14px;
       font-weight: 600;
@@ -475,37 +449,28 @@
       border-radius: 50%;
     }
 
-    @media (max-width: 930px) {
-      :root {
-        --board-size: min(43vw, 430px);
+    @media (max-width: 1200px) {
+      .app {
+        grid-template-columns: 1fr auto;
       }
 
       .control-deck {
-        grid-template-columns: 1fr 1fr;
+        grid-column: 1 / -1;
+        grid-row: 2;
       }
 
-      .clock-controls {
-        grid-column: 1 / -1;
-        justify-content: center;
-        grid-row: 2;
+      .boards-stage {
+        grid-row: 3;
       }
     }
 
     @media (max-width: 680px) {
-      :root {
-        --board-size: min(42.5vw, 330px);
-      }
-
       .app {
-        padding-inline: 10px;
+        grid-template-columns: 1fr;
       }
 
       .topbar {
-        padding-inline: 8px;
-      }
-
-      .brand p {
-        display: none;
+        grid-row: 1;
       }
 
       .restart-button {
@@ -514,46 +479,31 @@
       }
 
       .control-deck {
-        gap: 10px;
-        padding: 10px;
-        border-radius: 17px;
+        grid-row: 2;
+        gap: 4px;
       }
 
       .clock {
-        display: block;
-        padding: 11px;
+        padding: 7px;
       }
 
       .clock-player {
-        margin-bottom: 7px;
+        gap: 4px;
         font-size: 10px;
       }
 
       .clock-time {
-        min-width: 0;
-        font-size: clamp(25px, 8vw, 36px);
-        text-align: left;
+        min-width: 62px;
+        font-size: clamp(22px, 7vw, 30px);
       }
 
       .mode-row {
-        padding-inline: 8px;
+        grid-row: 3;
+        justify-content: center;
       }
 
       .boards-stage {
-        gap: 13px;
-      }
-
-      .board-shell {
-        padding: 5px;
-      }
-
-      .board-meta {
-        width: var(--board-size);
-        font-size: 9px;
-      }
-
-      .board-meta strong {
-        font-size: 11px;
+        grid-row: 4;
       }
     }
   </style>
@@ -625,13 +575,11 @@
 
     <section class="boards-stage">
       <div class="board-column">
-        <div class="board-meta"><strong>Board A</strong><span id="leftPerspective">White perspective</span></div>
         <div class="board-shell" id="leftShell">
           <div class="board" id="boardLeft"></div>
         </div>
       </div>
       <div class="board-column">
-        <div class="board-meta"><strong>Board B</strong><span id="rightPerspective">Black perspective</span></div>
         <div class="board-shell rotate-180" id="rightShell">
           <div class="board" id="boardRight"></div>
         </div>
@@ -673,8 +621,6 @@
       const elements = {
         leftShell: document.getElementById("leftShell"),
         rightShell: document.getElementById("rightShell"),
-        leftPerspective: document.getElementById("leftPerspective"),
-        rightPerspective: document.getElementById("rightPerspective"),
         gameStatus: document.getElementById("gameStatus"),
         whiteClock: document.getElementById("whiteClock"),
         blackClock: document.getElementById("blackClock"),
@@ -891,13 +837,9 @@
 
         if (layout === "opposed") {
           elements.rightShell.classList.add("rotate-180");
-          elements.leftPerspective.textContent = "White perspective";
-          elements.rightPerspective.textContent = "Black perspective";
         } else {
           elements.leftShell.classList.add("rotate-90");
           elements.rightShell.classList.add("rotate-neg-90");
-          elements.leftPerspective.textContent = "Clockwise";
-          elements.rightPerspective.textContent = "Counter-clockwise";
         }
 
         document.querySelectorAll(".segment").forEach((button) => {
