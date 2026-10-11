@@ -386,7 +386,20 @@
     .board {
       width: 100%;
       height: 100%;
-      touch-action: manipulation;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .board img {
+      -webkit-user-drag: none;
+    }
+
+    .dragged-piece {
+      position: fixed;
+      z-index: 1000;
+      pointer-events: none;
+      transform-origin: center;
     }
 
     .board-shell.rotate-90 {
@@ -643,6 +656,7 @@
       let selectedSquare = null;
       let legalTargets = [];
       let layout = "opposed";
+      let pointerDrag = null;
 
       const clock = {
         initialMs: 5 * 60 * 1000,
@@ -727,10 +741,7 @@
         return true;
       }
 
-      function handleSquareTap(event) {
-        const square = squareFromElement(event.target);
-        if (!square) return;
-
+      function handleSquareTap(square) {
         if (selectedSquare && legalTargets.some((move) => move.to === square)) {
           completeMove(selectedSquare, square);
           return;
@@ -746,37 +757,131 @@
         selectSquare(square);
       }
 
-      function onDragStart(source, piece) {
-        if (game.game_over()) return false;
-        if ((game.turn() === "w" && piece.startsWith("b")) ||
-            (game.turn() === "b" && piece.startsWith("w"))) return false;
-        selectSquare(source);
-        return true;
+      function rotationForBoard(boardRoot) {
+        const shell = boardRoot.closest(".board-shell");
+        if (shell.classList.contains("rotate-90")) return 90;
+        if (shell.classList.contains("rotate-neg-90")) return -90;
+        if (shell.classList.contains("rotate-180")) return 180;
+        return 0;
       }
 
-      function onDrop(source, target) {
-        if (!completeMove(source, target)) return "snapback";
+      function canDragPiece(square) {
+        const piece = game.get(square);
+        return piece && piece.color === game.turn() && !game.game_over();
       }
 
-      function onSnapEnd() {
-        boards.forEach((board) => board.position(game.fen(), false));
+      function positionDraggedPiece(clientX, clientY) {
+        if (!pointerDrag?.ghost) return;
+        pointerDrag.ghost.style.left = `${clientX - pointerDrag.size / 2}px`;
+        pointerDrag.ghost.style.top = `${clientY - pointerDrag.size / 2}px`;
+      }
+
+      function beginPointerDrag(event) {
+        const pieceImage = pointerDrag.squareElement.querySelector("img");
+        if (!pieceImage) return;
+
+        const pieceRect = pieceImage.getBoundingClientRect();
+        const ghost = pieceImage.cloneNode(true);
+        ghost.className = "dragged-piece";
+        ghost.style.width = `${pieceRect.width}px`;
+        ghost.style.height = `${pieceRect.height}px`;
+        ghost.style.transform = `rotate(${pointerDrag.rotation}deg)`;
+        document.body.appendChild(ghost);
+
+        pointerDrag.dragging = true;
+        pointerDrag.ghost = ghost;
+        pointerDrag.pieceImage = pieceImage;
+        pointerDrag.size = pieceRect.width;
+        pieceImage.style.visibility = "hidden";
+        selectSquare(pointerDrag.source);
+        positionDraggedPiece(event.clientX, event.clientY);
+      }
+
+      function finishPointerDrag(targetSquare) {
+        const drag = pointerDrag;
+        pointerDrag = null;
+        if (!drag) return;
+
+        drag.ghost?.remove();
+        if (drag.pieceImage) drag.pieceImage.style.visibility = "";
+        if (drag.dragging && targetSquare) completeMove(drag.source, targetSquare);
+      }
+
+      function onPointerDown(event) {
+        if (!event.isPrimary || event.button > 0) return;
+        const squareElement = event.target.closest(".square-55d63");
+        if (!squareElement) return;
+
+        const source = squareFromElement(squareElement);
+        pointerDrag = {
+          pointerId: event.pointerId,
+          source,
+          squareElement,
+          boardRoot: event.currentTarget,
+          startX: event.clientX,
+          startY: event.clientY,
+          rotation: rotationForBoard(event.currentTarget),
+          dragging: false,
+          ghost: null,
+          pieceImage: null,
+          size: 0
+        };
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }
+
+      function onPointerMove(event) {
+        if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return;
+        const distance = Math.hypot(
+          event.clientX - pointerDrag.startX,
+          event.clientY - pointerDrag.startY
+        );
+
+        if (!pointerDrag.dragging && distance > 6 && canDragPiece(pointerDrag.source)) {
+          beginPointerDrag(event);
+        }
+        if (pointerDrag.dragging) {
+          event.preventDefault();
+          positionDraggedPiece(event.clientX, event.clientY);
+        }
+      }
+
+      function onPointerUp(event) {
+        if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return;
+        const drag = pointerDrag;
+
+        if (!drag.dragging) {
+          pointerDrag = null;
+          handleSquareTap(drag.source);
+          return;
+        }
+
+        const targetElement = document.elementFromPoint(event.clientX, event.clientY);
+        const targetSquare = targetElement ? squareFromElement(targetElement) : null;
+        finishPointerDrag(targetSquare);
+      }
+
+      function onPointerCancel(event) {
+        if (pointerDrag?.pointerId === event.pointerId) finishPointerDrag(null);
       }
 
       function createBoards() {
         const config = {
           position: "start",
-          draggable: true,
+          draggable: false,
           pieceTheme,
-          showNotation: true,
-          onDragStart,
-          onDrop,
-          onSnapEnd
+          showNotation: true
         };
         boards = [
-          Chessboard("boardLeft", config),
-          Chessboard("boardRight", config)
+          Chessboard("boardLeft", { ...config, orientation: "white" }),
+          Chessboard("boardRight", { ...config, orientation: "black" })
         ];
-        boardIds.forEach((id) => document.getElementById(id).addEventListener("click", handleSquareTap));
+        boardIds.forEach((id) => {
+          const boardRoot = document.getElementById(id);
+          boardRoot.addEventListener("pointerdown", onPointerDown);
+          boardRoot.addEventListener("pointermove", onPointerMove);
+          boardRoot.addEventListener("pointerup", onPointerUp);
+          boardRoot.addEventListener("pointercancel", onPointerCancel);
+        });
       }
 
       function applyLayout(nextLayout) {
@@ -827,6 +932,7 @@
       }
 
       function startClock(color) {
+        if (clock.flagged.w || clock.flagged.b) return;
         clock.active = color;
         clock.running = true;
         clock.started = true;
@@ -854,23 +960,33 @@
         const elapsed = now - clock.lastTick;
         clock.lastTick = now;
         clock.remaining[clock.active] = Math.max(0, clock.remaining[clock.active] - elapsed);
-        if (clock.remaining[clock.active] === 0) clock.flagged[clock.active] = true;
+        if (clock.remaining[clock.active] === 0) {
+          clock.flagged[clock.active] = true;
+          clock.running = false;
+          clock.lastTick = null;
+          window.clearInterval(clock.timer);
+          clock.timer = null;
+          elements.pauseClock.textContent = "■";
+          elements.pauseClock.setAttribute("aria-label", "Clock stopped");
+        }
         renderClock();
       }
 
       function advanceClock(movingColor) {
+        if (clock.flagged.w || clock.flagged.b) return;
         if (!clock.started) {
           startClock(game.turn());
           return;
         }
 
         tickClock();
+        if (clock.flagged.w || clock.flagged.b) return;
         clock.remaining[movingColor] += clock.incrementMs;
         startClock(game.turn());
       }
 
       function toggleClock() {
-        if (!clock.started) return;
+        if (!clock.started || clock.flagged.w || clock.flagged.b) return;
         if (clock.running) {
           stopClock();
           elements.pauseClock.textContent = "▶";
