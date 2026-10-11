@@ -325,6 +325,54 @@
       color: var(--blue);
     }
 
+    .promotion-menu {
+      --promotion-rotation: 0deg;
+      position: fixed;
+      z-index: 1100;
+      display: grid;
+      grid-template-columns: 60px;
+      gap: 5px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      background: rgba(255, 253, 248, 0.98);
+      border-radius: 15px;
+      box-shadow: 0 14px 34px rgba(36, 34, 31, 0.24);
+      backdrop-filter: blur(16px);
+      transform: rotate(var(--promotion-rotation));
+      transform-origin: center;
+    }
+
+    .promotion-menu[hidden] {
+      display: none;
+    }
+
+    .promotion-option {
+      display: grid;
+      width: 60px;
+      height: 60px;
+      padding: 4px;
+      place-items: center;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: 140ms ease;
+    }
+
+    .promotion-option:hover,
+    .promotion-option:focus-visible {
+      border-color: rgba(37, 99, 235, 0.36);
+      outline: none;
+      background: rgba(37, 99, 235, 0.09);
+    }
+
+    .promotion-option img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+    }
+
     .mode-row {
       display: flex;
       flex-wrap: wrap;
@@ -806,6 +854,21 @@
       title="Enter fullscreen"
     >⛶</button>
 
+    <div class="promotion-menu" id="promotionMenu" role="menu" aria-label="Choose promotion piece" hidden>
+      <button class="promotion-option" type="button" role="menuitem" data-promotion="q" aria-label="Promote to queen">
+        <img alt="">
+      </button>
+      <button class="promotion-option" type="button" role="menuitem" data-promotion="r" aria-label="Promote to rook">
+        <img alt="">
+      </button>
+      <button class="promotion-option" type="button" role="menuitem" data-promotion="b" aria-label="Promote to bishop">
+        <img alt="">
+      </button>
+      <button class="promotion-option" type="button" role="menuitem" data-promotion="n" aria-label="Promote to knight">
+        <img alt="">
+      </button>
+    </div>
+
     <section class="control-deck" aria-label="Chess clocks">
       <template x-for="clock in clocks" :key="clock.id">
         <div class="clock" :class="clock.color" :id="clock.id" :style="{ order: clock.order }">
@@ -917,6 +980,7 @@
       let legalTargets = [];
       let layout = "opposed";
       let sidesSwapped = false;
+      let pendingPromotion = null;
       let pointerDrag = null;
 
       const clock = {
@@ -941,6 +1005,7 @@
         whiteTime: document.getElementById("whiteTime"),
         blackTime: document.getElementById("blackTime"),
         fullscreenButton: document.getElementById("fullscreenButton"),
+        promotionMenu: document.getElementById("promotionMenu"),
         swapSides: document.getElementById("swapSides"),
         pauseClock: document.getElementById("pauseClock"),
         timeMode: document.getElementById("timeMode"),
@@ -1009,9 +1074,9 @@
         paintHighlights();
       }
 
-      function completeMove(source, target) {
+      function completeMove(source, target, promotion = "q") {
         const movingColor = game.turn();
-        const move = game.move({ from: source, to: target, promotion: "q" });
+        const move = game.move({ from: source, to: target, promotion });
         if (!move) return false;
 
         boards.forEach((board) => board.position(game.fen(), false));
@@ -1022,6 +1087,68 @@
         advanceClock(movingColor);
         updateStatus();
         return true;
+      }
+
+      function hidePromotionMenu() {
+        pendingPromotion = null;
+        elements.promotionMenu.hidden = true;
+      }
+
+      function showPromotionMenu(source, target, boardId) {
+        const boardRoot = document.getElementById(boardId);
+        const targetSquare = boardRoot.querySelector(`.square-${target}`);
+        if (!targetSquare) return;
+
+        const color = game.turn();
+        pendingPromotion = { source, target, boardId };
+        elements.promotionMenu.querySelectorAll(".promotion-option").forEach((button) => {
+          const code = `${color}${button.dataset.promotion.toUpperCase()}`;
+          button.querySelector("img").src = pieceTheme.replace("{piece}", code);
+        });
+        const rotation = rotationForBoard(boardRoot);
+        elements.promotionMenu.style.setProperty("--promotion-rotation", `${rotation}deg`);
+        elements.promotionMenu.hidden = false;
+
+        const squareRect = targetSquare.getBoundingClientRect();
+        const menuWidth = elements.promotionMenu.offsetWidth;
+        const menuHeight = elements.promotionMenu.offsetHeight;
+        const radians = rotation * Math.PI / 180;
+        const distance = squareRect.height / 2 + menuHeight / 2 + 6;
+        const visualWidth = rotation % 180 === 0 ? menuWidth : menuHeight;
+        const visualHeight = rotation % 180 === 0 ? menuHeight : menuWidth;
+        const clampCenter = (value, size, viewportSize) => {
+          if (size + 16 >= viewportSize) return viewportSize / 2;
+          return Math.max(size / 2 + 8, Math.min(viewportSize - size / 2 - 8, value));
+        };
+        const centerX = clampCenter(
+          squareRect.left + squareRect.width / 2 - Math.sin(radians) * distance,
+          visualWidth,
+          window.innerWidth
+        );
+        const centerY = clampCenter(
+          squareRect.top + squareRect.height / 2 + Math.cos(radians) * distance,
+          visualHeight,
+          window.innerHeight
+        );
+        elements.promotionMenu.style.left = `${centerX - menuWidth / 2}px`;
+        elements.promotionMenu.style.top = `${centerY - menuHeight / 2}px`;
+        elements.promotionMenu.querySelector(".promotion-option").focus();
+      }
+
+      function attemptMove(source, target, boardId) {
+        const legalMove = game.moves({ square: source, verbose: true }).find((move) => move.to === target);
+        if (legalMove?.promotion) {
+          showPromotionMenu(source, target, boardId);
+          return true;
+        }
+        return completeMove(source, target);
+      }
+
+      function choosePromotion(piece) {
+        if (!pendingPromotion) return;
+        const { source, target } = pendingPromotion;
+        hidePromotionMenu();
+        completeMove(source, target, piece);
       }
 
       function findKingSquare(color) {
@@ -1120,8 +1247,9 @@
       }
 
       function handleSquareTap(square, boardId) {
+        if (pendingPromotion) return;
         if (selectedBoardId === boardId && selectedSquare && legalTargets.some((move) => move.to === square)) {
-          completeMove(selectedSquare, square);
+          attemptMove(selectedSquare, square, boardId);
           return;
         }
 
@@ -1183,11 +1311,11 @@
 
         drag.ghost?.remove();
         if (drag.pieceImage) drag.pieceImage.style.visibility = "";
-        if (drag.dragging && targetSquare) completeMove(drag.source, targetSquare);
+        if (drag.dragging && targetSquare) attemptMove(drag.source, targetSquare, drag.boardRoot.id);
       }
 
       function onPointerDown(event) {
-        if (!event.isPrimary || event.button > 0) return;
+        if (pendingPromotion || !event.isPrimary || event.button > 0) return;
         const squareElement = event.target.closest(".square-55d63");
         if (!squareElement) return;
 
@@ -1320,6 +1448,7 @@
       }
 
       function toggleSidePositions() {
+        hidePromotionMenu();
         sidesSwapped = !sidesSwapped;
         applySidePositions();
       }
@@ -1452,6 +1581,7 @@
       }
 
       function restartGame() {
+        hidePromotionMenu();
         game.reset();
         selectedSquare = null;
         selectedBoardId = null;
@@ -1467,6 +1597,15 @@
       });
       document.getElementById("restartGame").addEventListener("click", restartGame);
       elements.swapSides.addEventListener("click", toggleSidePositions);
+      elements.promotionMenu.querySelectorAll(".promotion-option").forEach((button) => {
+        button.addEventListener("click", () => choosePromotion(button.dataset.promotion));
+      });
+      document.addEventListener("pointerdown", (event) => {
+        if (pendingPromotion && !elements.promotionMenu.contains(event.target)) hidePromotionMenu();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && pendingPromotion) hidePromotionMenu();
+      });
       document.getElementById("resetClock").addEventListener("click", resetClock);
       elements.fullscreenButton.addEventListener("click", toggleFullscreen);
       document.addEventListener("fullscreenchange", () => {
