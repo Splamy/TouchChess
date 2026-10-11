@@ -26,9 +26,15 @@
       box-sizing: border-box;
     }
 
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
     body {
       min-width: 320px;
-      min-height: 100vh;
       margin: 0;
       color: var(--ink);
       background:
@@ -52,7 +58,9 @@
       display: grid;
       grid-template-columns: auto minmax(440px, 1fr) auto;
       width: 100%;
-      min-height: 100vh;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
       align-items: center;
       gap: 6px;
       padding: 0;
@@ -335,16 +343,19 @@
 
     .boards-stage {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, var(--board-size));
       grid-column: 1 / -1;
       gap: 0;
       align-items: center;
+      justify-content: center;
       justify-items: center;
+      min-height: 0;
       padding: 0;
     }
 
     .board-column {
-      width: 100%;
+      width: var(--board-size);
+      height: var(--board-size);
     }
 
     .board-shell {
@@ -830,6 +841,26 @@
         });
       }
 
+      let resizeFrame = null;
+
+      function resizeLayout() {
+        window.cancelAnimationFrame(resizeFrame);
+        resizeFrame = window.requestAnimationFrame(() => {
+          const controls = [
+            document.querySelector(".topbar"),
+            document.querySelector(".control-deck"),
+            document.querySelector(".mode-row")
+          ];
+          const controlsBottom = Math.max(...controls.map((element) => element.getBoundingClientRect().bottom));
+          const statusHeight = document.querySelector(".statusbar").getBoundingClientRect().height;
+          const availableHeight = Math.max(1, window.innerHeight - controlsBottom - statusHeight - 12);
+          const boardSize = Math.floor(Math.min(window.innerWidth / 2, availableHeight));
+
+          document.documentElement.style.setProperty("--board-size", `${boardSize}px`);
+          boards.forEach((board) => board.resize());
+        });
+      }
+
       function applyLayout(nextLayout) {
         layout = nextLayout;
         elements.leftShell.className = "board-shell";
@@ -998,12 +1029,20 @@
       [elements.customMinutes, elements.customIncrement].forEach((input) => {
         input.addEventListener("change", resetClock);
       });
-      window.addEventListener("resize", () => boards.forEach((board) => board.resize()));
+      window.addEventListener("resize", resizeLayout);
+      window.visualViewport?.addEventListener("resize", resizeLayout);
 
       createBoards();
       applyLayout("opposed");
       resetClock();
       updateStatus();
+      resizeLayout();
+
+      const layoutObserver = new ResizeObserver(resizeLayout);
+      [".topbar", ".control-deck", ".mode-row", ".statusbar"].forEach((selector) => {
+        layoutObserver.observe(document.querySelector(selector));
+      });
+      document.fonts?.ready.then(resizeLayout);
     })();
   </script>
 </body>
