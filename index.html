@@ -913,6 +913,7 @@
       const pieceValueOrder = ["q", "r", "b", "n", "p"];
       let boards = [];
       let selectedSquare = null;
+      let selectedBoardId = null;
       let legalTargets = [];
       let layout = "opposed";
       let sidesSwapped = false;
@@ -983,27 +984,27 @@
 
       function paintHighlights() {
         clearHighlights();
-        if (!selectedSquare) return;
+        if (!selectedSquare || !selectedBoardId) return;
 
-        boardIds.forEach((boardId) => {
-          const root = document.getElementById(boardId);
-          root.querySelector(`.square-${selectedSquare}`)?.classList.add("selected-square");
-          legalTargets.forEach(({ to, captured }) => {
-            root.querySelector(`.square-${to}`)?.classList.add(captured ? "valid-capture" : "valid-move");
-          });
+        const root = document.getElementById(selectedBoardId);
+        root.querySelector(`.square-${selectedSquare}`)?.classList.add("selected-square");
+        legalTargets.forEach(({ to, captured }) => {
+          root.querySelector(`.square-${to}`)?.classList.add(captured ? "valid-capture" : "valid-move");
         });
       }
 
-      function selectSquare(square) {
+      function selectSquare(square, boardId) {
         const piece = game.get(square);
         if (!piece || piece.color !== game.turn()) {
           selectedSquare = null;
+          selectedBoardId = null;
           legalTargets = [];
           paintHighlights();
           return;
         }
 
         selectedSquare = square;
+        selectedBoardId = boardId;
         legalTargets = game.moves({ square, verbose: true });
         paintHighlights();
       }
@@ -1015,6 +1016,7 @@
 
         boards.forEach((board) => board.position(game.fen(), false));
         selectedSquare = null;
+        selectedBoardId = null;
         legalTargets = [];
         window.setTimeout(paintHighlights, 0);
         advanceClock(movingColor);
@@ -1117,20 +1119,21 @@
         });
       }
 
-      function handleSquareTap(square) {
-        if (selectedSquare && legalTargets.some((move) => move.to === square)) {
+      function handleSquareTap(square, boardId) {
+        if (selectedBoardId === boardId && selectedSquare && legalTargets.some((move) => move.to === square)) {
           completeMove(selectedSquare, square);
           return;
         }
 
-        if (square === selectedSquare) {
+        if (selectedBoardId === boardId && square === selectedSquare) {
           selectedSquare = null;
+          selectedBoardId = null;
           legalTargets = [];
           paintHighlights();
           return;
         }
 
-        selectSquare(square);
+        selectSquare(square, boardId);
       }
 
       function rotationForBoard(boardRoot) {
@@ -1169,7 +1172,7 @@
         pointerDrag.pieceImage = pieceImage;
         pointerDrag.size = pieceRect.width;
         pieceImage.style.visibility = "hidden";
-        selectSquare(pointerDrag.source);
+        selectSquare(pointerDrag.source, pointerDrag.boardRoot.id);
         positionDraggedPiece(event.clientX, event.clientY);
       }
 
@@ -1227,13 +1230,14 @@
 
         if (!drag.dragging) {
           pointerDrag = null;
-          handleSquareTap(drag.source);
+          handleSquareTap(drag.source, drag.boardRoot.id);
           return;
         }
 
         const targetElement = document.elementFromPoint(event.clientX, event.clientY);
         const targetSquare = targetElement ? squareFromElement(targetElement) : null;
-        finishPointerDrag(targetSquare);
+        const targetBoard = targetElement?.closest(".board");
+        finishPointerDrag(targetBoard === drag.boardRoot ? targetSquare : null);
       }
 
       function onPointerCancel(event) {
@@ -1450,6 +1454,7 @@
       function restartGame() {
         game.reset();
         selectedSquare = null;
+        selectedBoardId = null;
         legalTargets = [];
         boards.forEach((board) => board.start(false));
         clearHighlights();
