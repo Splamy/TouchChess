@@ -4,7 +4,7 @@
 - **Libraries:** chess.js validates game rules, chessboard.js renders positions, jQuery supports chessboard.js, and Alpine.js generates repeated clocks, boards, and layout controls.
 - **Dual-board view:** Both boards show one synchronized game. Board A uses white orientation and Board B uses black orientation.
 - **Layouts:** Opposed mode rotates Board B by 180 degrees. Sideways mode rotates Board A by 90 degrees and Board B by 270 degrees, using short visual transitions.
-- **Piece interaction:** Each board maintains its own tap selection and legal destinations. Pointer Events provide consistent mouse and touch dragging, including correctly rotated floating pieces, while pointer-keyed interaction state allows multiple touches to move independently at the same time.
+- **Piece interaction:** Each board belongs to the player color facing it and only allows that color's pieces to be dragged. One pointer per color is accepted, so both players can hold pieces simultaneously and the waiting player's drag remains active when the turn changes. Tap selection and legal destinations stay local to the owning board.
 - **Pawn promotion:** A legal promotion pauses move completion and opens an enlarged vertical icon-only picker for queen, rook, bishop, or knight. The whole picker uses the board's piece resource, rotates into the active player's viewing direction, and appears below the promotion square from that player's perspective.
 - **Move history:** The origin and destination squares of the latest move receive a synchronized light-yellow tint on both boards.
 - **Viewport layout:** Boards are edge-to-edge, equally sized, centered, and dynamically constrained by both viewport width and available height. Page scrolling is disabled.

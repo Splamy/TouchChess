@@ -1057,9 +1057,14 @@
         });
       }
 
+      function colorForBoard(boardId) {
+        const isLeftBoard = boardId === boardIds[0];
+        return isLeftBoard !== sidesSwapped ? "w" : "b";
+      }
+
       function selectSquare(square, boardId) {
         const piece = game.get(square);
-        if (!piece || piece.color !== game.turn()) {
+        if (!piece || piece.color !== colorForBoard(boardId) || piece.color !== game.turn()) {
           boardSelections.delete(boardId);
           paintHighlights();
           return;
@@ -1077,9 +1082,9 @@
         const move = game.move({ from: source, to: target, promotion });
         if (!move) return false;
 
-        cancelPointerDrags();
         boards.forEach((board) => board.position(game.fen(), false));
         boardSelections.clear();
+        reconcilePointerDrags();
         window.setTimeout(paintHighlights, 0);
         advanceClock(movingColor);
         updateStatus();
@@ -1096,7 +1101,6 @@
         const targetSquare = boardRoot.querySelector(`.square-${target}`);
         if (!targetSquare) return;
 
-        cancelPointerDrags();
         const color = game.turn();
         pendingPromotion = { source, target, boardId };
         elements.promotionMenu.querySelectorAll(".promotion-option").forEach((button) => {
@@ -1269,9 +1273,9 @@
         return 0;
       }
 
-      function canDragPiece(square) {
+      function canDragPiece(square, boardId) {
         const piece = game.get(square);
-        return piece && piece.color === game.turn() && !game.game_over();
+        return piece && piece.color === colorForBoard(boardId) && !game.game_over();
       }
 
       function hideDraggedPiece(pieceImage) {
@@ -1334,7 +1338,13 @@
         drag.ghost?.remove();
         if (drag.pieceImage) restoreDraggedPiece(drag.pieceImage);
         if (drag.boardRoot.hasPointerCapture(pointerId)) drag.boardRoot.releasePointerCapture(pointerId);
-        if (drag.dragging && targetSquare && drag.startingFen === game.fen() && !pendingPromotion) {
+        if (
+          drag.dragging &&
+          targetSquare &&
+          drag.color === game.turn() &&
+          drag.color === colorForBoard(drag.boardRoot.id) &&
+          !pendingPromotion
+        ) {
           attemptMove(drag.source, targetSquare, drag.boardRoot.id);
         }
       }
@@ -1343,27 +1353,61 @@
         Array.from(pointerDrags.keys()).forEach((pointerId) => finishPointerDrag(pointerId, null));
       }
 
+      function reconcilePointerDrags() {
+        pointerDrags.forEach((drag, pointerId) => {
+          const piece = game.get(drag.source);
+          if (
+            game.game_over() ||
+            piece?.color !== drag.color ||
+            drag.color !== colorForBoard(drag.boardRoot.id)
+          ) {
+            finishPointerDrag(pointerId, null);
+            return;
+          }
+
+          if (drag.pieceImage) restoreDraggedPiece(drag.pieceImage);
+          drag.squareElement = drag.boardRoot.querySelector(`.square-${drag.source}`);
+          drag.pieceImage = drag.squareElement?.querySelector("img") || null;
+          if (drag.dragging && drag.pieceImage) hideDraggedPiece(drag.pieceImage);
+
+          if (drag.dragging && drag.color === game.turn()) {
+            boardSelections.set(drag.boardRoot.id, {
+              square: drag.source,
+              legalTargets: game.moves({ square: drag.source, verbose: true })
+            });
+          }
+        });
+      }
+
+      function hasPointerForColor(color) {
+        return Array.from(pointerDrags.values()).some((drag) => drag.color === color);
+      }
+
       function onPointerDown(event) {
         if (pendingPromotion || event.button > 0 || pointerDrags.has(event.pointerId)) return;
         const squareElement = event.target.closest(".square-55d63");
         if (!squareElement) return;
 
+        const boardRoot = event.currentTarget;
+        const color = colorForBoard(boardRoot.id);
+        if (hasPointerForColor(color)) return;
+
         const source = squareFromElement(squareElement);
         pointerDrags.set(event.pointerId, {
           pointerId: event.pointerId,
+          color,
           source,
           squareElement,
-          boardRoot: event.currentTarget,
-          startingFen: game.fen(),
+          boardRoot,
           startX: event.clientX,
           startY: event.clientY,
-          rotation: rotationForBoard(event.currentTarget),
+          rotation: rotationForBoard(boardRoot),
           dragging: false,
           ghost: null,
           pieceImage: null,
           size: 0
         });
-        event.currentTarget.setPointerCapture(event.pointerId);
+        boardRoot.setPointerCapture(event.pointerId);
       }
 
       function onPointerMove(event) {
@@ -1374,7 +1418,7 @@
           event.clientY - drag.startY
         );
 
-        if (!drag.dragging && distance > 6 && drag.startingFen === game.fen() && canDragPiece(drag.source)) {
+        if (!drag.dragging && distance > 6 && canDragPiece(drag.source, drag.boardRoot.id)) {
           beginPointerDrag(event, drag);
         }
         if (drag.dragging) {
@@ -1389,7 +1433,7 @@
 
         if (!drag.dragging) {
           finishPointerDrag(event.pointerId, null);
-          if (drag.startingFen === game.fen()) handleSquareTap(drag.source, drag.boardRoot.id);
+          if (drag.color === game.turn()) handleSquareTap(drag.source, drag.boardRoot.id);
           return;
         }
 
@@ -1481,6 +1525,8 @@
 
       function toggleSidePositions() {
         hidePromotionMenu();
+        cancelPointerDrags();
+        boardSelections.clear();
         sidesSwapped = !sidesSwapped;
         applySidePositions();
       }
